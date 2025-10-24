@@ -1,0 +1,28 @@
+# PyTorch and CUDA
+torch==2.3.0
+torchvision
+torchaudio
+
+# Hugging Face ecosystem
+transformers[deepspeed]==4.49.0
+accelerate
+diffusers
+
+# Metrics and datasets
+torchmetrics[image]==1.6.3
+datasets==2.21.0
+evaluate
+piq
+
+# Utility libraries
+numpy==1.26.4
+tabulate
+sentencepiece
+bitsandbytes
+
+# Experiment tracking and visualization
+wandb
+gradio
+
+# COCO tools
+pycocotools

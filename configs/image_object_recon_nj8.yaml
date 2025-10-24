@@ -1,0 +1,65 @@
+# configs/image_object_recon_nj8.yaml
+# llavaov0p5_sana.yaml 기반 이미지 전용 객체 재구성 설정
+
+_gradient_checkpointing: True
+
+# --- 모델 ID ---
+vae_id: "Efficient-Large-Model/Sana_1600M_512px_diffusers"
+noise_scheduler_id: "Efficient-Large-Model/Sana_1600M_512px_diffusers"
+scheduler_id: "Efficient-Large-Model/Sana_1600M_512px_diffusers"
+mllm_id: "llava-hf/llava-onevision-qwen2-0.5b-ov-hf" # 사용할 MLLM
+diffusion_model_id: "Efficient-Large-Model/Sana_1600M_512px_diffusers" # 사용할 Diffusion 모델
+
+# --- 모델 구조 파라미터 ---
+vae_downsample_f: 32
+in_channels: 32 # Sana 모델의 입력 채널
+num_metaqueries: 256 # 총 사용 가능한 쿼리 슬롯 수 (N_max)
+connector_num_hidden_layers: 24 # Connector의 레이어 수
+
+# --- 이미지 및 학습 설정 ---
+target_image_size: 512 # 학습 및 생성 이미지 크기
+per_device_train_batch_size: 32 # GPU당 학습 배치 크기 (메모리에 맞게 조절)
+# num_train_epochs: 5.0 # Epoch 대신 max_steps 사용 권장
+max_steps: 100000 # 총 학습 스텝 수 (데이터셋 크기에 맞게 조절)
+learning_rate: 0.0001 # 학습률
+warmup_steps: 5000 # 학습률 워밍업 스텝 수
+lr_scheduler_type: "cosine_with_min_lr"
+lr_scheduler_kwargs:
+  min_lr: 0.00001 # 최소 학습률
+loss_type: "flow" # 사용할 Loss 종류 (Sana는 "flow" 권장)
+
+# --- [ 신규 추가: 데이터셋 관련 설정 ] ---
+j_vectors_per_object: 8                     # 객체당 벡터 수 (j) - 조절 가능
+dataset_jsonl_path: "./coco/my_dataset.jsonl"  # !!! 실제 JSONL 파일 경로로 수정하세요 !!!
+image_base_dir: "./coco/train2017"             # !!! 실제 이미지 기본 디렉토리 경로로 수정하세요 !!!
+
+# --- [ 신규 추가: Loss 및 추론 관련 설정 ] ---
+lambda_length: 0.1                          # Length Loss 가중치 (lambda_weight) - 조절 가능
+inference_threshold: 0.5                    # 추론 시 사용할 확률 임계값 - 조절 가능
+
+# --- 모델 동결/학습 설정 ---
+modules_to_freeze:
+  - "vae" # VAE는 동결
+  - "model.mllm_backbone" # MLLM 백본도 동결 (Objectness Head와 Connector만 학습)
+
+modules_to_unfreeze: # 명시적으로 학습시킬 부분 (필요시 추가)
+  # 기본적으로 Connector와 Objectness Head는 freeze 목록에 없으므로 학습됨
+  # 예: MLLM 임베딩 일부만 학습시키려면 아래 주석 해제
+  model.mllm_backbone.language_model.model.embed_tokens
+  #pass # 명시적으로 비워둠
+
+# --- 평가 및 저장 설정 ---
+eval_steps: 1000 # 평가 간격 (스텝 기준)
+save_steps: 1000 # 체크포인트 저장 간격 (스텝 기준)
+
+# --- 분산 학습 설정 ---
+deepspeed: "configs/zero1.json" # DeepSpeed 설정 파일 (ZeRO Stage 1 권장)
+
+# --- 사용할 데이터셋 지정 ---
+train_datasets:
+  object_recon: -1 # dataset.py에서 정의한 "object_recon" 사용
+
+eval_dataset: "object_recon" # 평가에도 동일한 데이터셋 사용
+
+# --- 기타 ---
+system_prompt: "" # 이미지 전용이므로 시스템 프롬프트 비움
