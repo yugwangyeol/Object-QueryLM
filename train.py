@@ -90,7 +90,7 @@ class TrainingArguments(transformers.TrainingArguments):
     output_dir: str = "output" # 기본 출력 디렉토리
     data_dir: str = ".cache" # 데이터 캐시 디렉토리
     logging_dir: str = "logs" # 로깅 디렉토리
-    eval_on_start: bool = True
+    eval_on_start: bool = False #True
     eval_strategy: str = "steps"
     eval_steps: int = 1000 # 평가 간격 (조절 가능)
     eval_delay: int = 0

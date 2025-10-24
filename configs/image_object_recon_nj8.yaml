@@ -18,7 +18,7 @@ connector_num_hidden_layers: 24 # Connector의 레이어 수
 
 # --- 이미지 및 학습 설정 ---
 target_image_size: 512 # 학습 및 생성 이미지 크기
-per_device_train_batch_size: 32 # GPU당 학습 배치 크기 (메모리에 맞게 조절)
+per_device_train_batch_size: 8 # GPU당 학습 배치 크기 (메모리에 맞게 조절)
 # num_train_epochs: 5.0 # Epoch 대신 max_steps 사용 권장
 max_steps: 100000 # 총 학습 스텝 수 (데이터셋 크기에 맞게 조절)
 learning_rate: 0.0001 # 학습률
@@ -30,8 +30,8 @@ loss_type: "flow" # 사용할 Loss 종류 (Sana는 "flow" 권장)
 
 # --- [ 신규 추가: 데이터셋 관련 설정 ] ---
 j_vectors_per_object: 8                     # 객체당 벡터 수 (j) - 조절 가능
-dataset_jsonl_path: "./coco/my_dataset_new.jsonl"  # !!! 실제 JSONL 파일 경로로 수정하세요 !!!
-image_base_dir: "./coco/train2017"             # !!! 실제 이미지 기본 디렉토리 경로로 수정하세요 !!!
+dataset_jsonl_path: "coco/my_dataset_new.jsonl"  # !!! 실제 JSONL 파일 경로로 수정하세요 !!!
+image_base_dir: "coco/train2017"             # !!! 실제 이미지 기본 디렉토리 경로로 수정하세요 !!!
 
 # --- [ 신규 추가: Loss 및 추론 관련 설정 ] ---
 lambda_length: 0.1                          # Length Loss 가중치 (lambda_weight) - 조절 가능
@@ -63,3 +63,4 @@ eval_dataset: "object_recon" # 평가에도 동일한 데이터셋 사용
 
 # --- 기타 ---
 system_prompt: "" # 이미지 전용이므로 시스템 프롬프트 비움
+

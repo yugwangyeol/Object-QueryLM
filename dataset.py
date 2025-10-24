@@ -198,22 +198,31 @@ def _object_recon_process_fn(batch, target_transform):
     # object_count_n은 batch에 이미 존재한다고 가정
     
     for i in range(len(images)):
-        #print(f"Loading image from path: {images[i]}")  # 디버그 출력
         try:
-            # 이미지가 경로 형태일 수 있으므로 PIL로 열기 시도
-            if isinstance(images[i], str): 
-                images[i] = PIL.Image.open(images[i]).convert("RGB")
-            # 이미 BytesIO 형태일 경우 처리
-            elif isinstance(images[i], dict) and 'bytes' in images[i]:
-                 images[i] = PIL.Image.open(
-                    io.BytesIO(images[i]["bytes"])
-                ).convert("RGB")
-            elif not isinstance(images[i], PIL.Image.Image):
-                 raise ValueError("Unsupported image format")
+            img = images[i]
+            # case 1: 파일 경로
+            if isinstance(img, str):
+                img = PIL.Image.open(img).convert("RGB")
+            # case 2: 딕셔너리로 bytes 포함
+            elif isinstance(img, dict) and 'bytes' in img:
+                data = img["bytes"]
+                # bytes, BytesIO 모두 대응
+                if isinstance(data, io.BytesIO):
+                    img = PIL.Image.open(data).convert("RGB")
+                elif isinstance(data, (bytes, bytearray)):
+                    img = PIL.Image.open(io.BytesIO(data)).convert("RGB")
+                else:
+                    raise ValueError(f"Unexpected image data type: {type(data)}")
+            # case 3: 이미 PIL.Image 객체인 경우
+            elif isinstance(img, PIL.Image.Image):
+                pass
+            else:
+                raise ValueError(f"Unsupported image format: {type(img)}")
+            images[i] = img
+
         except Exception as e:
             print(f"이미지 로딩 오류 (건너뜀): {e}")
             images[i] = None
-
     # 원본 이미지를 target으로 변환
     batch["target"] = [
         target_transform(image) if image is not None else None for image in images
@@ -233,13 +242,18 @@ def _object_recon_process_fn(batch, target_transform):
 
 
 def _collate_fn(batch, tokenize_func, tokenizer, data_args):
-    # None인 타겟(이미지 로딩 실패 등) 필터링
+    # Keep original batch size for debugging if we filter out invalid samples
+    original_batch_size = len(batch)
     none_idx = [i for i, example in enumerate(batch) if example["target"] is None]
     if len(none_idx) > 0:
         batch = [example for i, example in enumerate(batch) if i not in none_idx]
-        # 만약 필터링 후 배치가 비어있으면 빈 딕셔너리 반환 (오류 방지)
+        # 만약 필터링 후 배치가 비어있으면 명확한 예외를 던져 Trainer에서 처리하도록 함
         if not batch:
-             return {} 
+            # Raise an explicit error so the training loop fails fast with a clear message.
+            raise ValueError(
+                f"All {original_batch_size} samples in the batch have invalid targets (image loading failed). "
+                "Check your dataset preprocessing or remove/repair invalid entries."
+            )
     
     # target 텐서 스택
     return_dict = {"target": torch.stack([example["target"] for example in batch])}
@@ -281,6 +295,7 @@ def _collate_fn(batch, tokenize_func, tokenizer, data_args):
         return_dict["input_ids"], return_dict["attention_mask"] = tokenize_func(
             tokenizer, captions
         )
+        
     return return_dict
 
 
